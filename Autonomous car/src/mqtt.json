@@ -1,0 +1,6 @@
+{
+    "server": "192.168.1.136",
+    "port": 1883,
+    "user": "test",
+    "password": "test"
+}
