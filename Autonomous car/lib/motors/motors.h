@@ -1,16 +1,6 @@
 #include <Arduino.h>
 
 // Robot components
-struct Robot
-{
-    String id;
-    float wheelRadius;
-    Motor leftMotor, rightMotor;
-    Encoder leftEncoder, rightEncoder;
-    PIspeed leftPIDspeed, rightPIDspeed;
-    PIposition leftPIDposition, rightPIDposition;   
-};
-
 struct Motor
 {
     int in1;                      // Control pin 1 for motor driver
@@ -60,6 +50,16 @@ struct RateLimiter {
 struct PIControllerResult {
     float value;                  // Output value of the PI controller
     float integralError;          // Updated integral error after computation
+};
+
+struct Robot
+{
+    String id;
+    float wheelRadius;
+    Motor leftMotor, rightMotor;
+    Encoder leftEncoder, rightEncoder;
+    PIspeed leftPIDspeed, rightPIDspeed;
+    PIposition leftPIDposition, rightPIDposition;   
 };
 
 

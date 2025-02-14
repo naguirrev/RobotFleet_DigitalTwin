@@ -2,6 +2,52 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <motors.h>
+#include <LittleFS.h>
+
+//------------Settings-------------
+Robot robot;
+
+bool loadConfig(const char *filename, Robot &robot) {
+  File file = LittleFS.open(filename, "r");
+  if (!file) {
+      Serial.println("Error opening config file!");
+      return false;
+  }
+
+  StaticJsonDocument<1024> doc;  
+  DeserializationError error = deserializeJson(doc, file);
+  file.close();
+  
+  if (error) {
+      Serial.println("JSON parsing failed!");
+      return false;
+  }
+
+  // Cargar datos en el struct Robot
+  robot.id = doc["id"].as<String>();
+  robot.wheelRadius = doc["wheelRadius"].as<float>();
+
+  // Motores
+  robot.leftMotor = { doc["motorPin"]["left"]["in1"], doc["motorPin"]["left"]["in2"], doc["motorPin"]["left"]["ena"] };
+  robot.rightMotor = { doc["motorPin"]["right"]["in1"], doc["motorPin"]["right"]["in2"], doc["motorPin"]["right"]["ena"] };
+
+  // Encoders
+  robot.leftEncoder = { doc["encoder"]["left"]["pinA"], doc["encoder"]["left"]["pinB"] };
+  robot.rightEncoder = { doc["encoder"]["right"]["pinA"], doc["encoder"]["right"]["pinB"] };
+
+  // PID Speed
+  robot.leftPIDspeed = { doc["pid"]["speed"]["left"]["kp"], doc["pid"]["speed"]["left"]["ki"], 0,
+                         doc["pid"]["speed"]["left"]["coulombFriction"], 0, 0, 0 };
+  robot.rightPIDspeed = { doc["pid"]["speed"]["right"]["kp"], doc["pid"]["speed"]["right"]["ki"], 0,
+                          doc["pid"]["speed"]["right"]["coulombFriction"], 0, 0, 0 };
+
+  // PID Position
+  robot.leftPIDposition = { doc["pid"]["position"]["left"]["kp"], doc["pid"]["position"]["left"]["ki"], doc["pid"]["position"]["left"]["minSpeed"], 0 };
+  robot.rightPIDposition = { doc["pid"]["position"]["right"]["kp"], doc["pid"]["position"]["right"]["ki"], doc["pid"]["position"]["right"]["minSpeed"], 0 };
+
+  return true;
+}
 
 //---------WIFI----------------- 
 const char* ssid = "DIGIFIBRA-kDuE";
@@ -124,22 +170,6 @@ float rightPosIntegralError = 0;
 unsigned long lastControlTime = 0;
 
 // --- Structs ---
-struct PIControllerResult {
-    float dutyCycle;         // Duty cycle calculado
-    float integralError; // Valor actualizado del error integral
-};
-
-struct PIPositionResult {
-    float angularSpeed;       // SetPointVelocidad
-    float integralError; // Valor actualizado del error integral
-};
-struct RateLimiter {
-    float rateUp;       // Límite de incremento máximo (R_up)
-    float rateDown;     // Límite de decremento máximo (R_down)
-    float previousOutput; // Salida anterior (y(t-Δt))
-    float deltaTime;    // Intervalo de tiempo (Δt)
-};
-
 RateLimiter leftRateLimiter;
 RateLimiter rightRateLimiter;
 
@@ -175,7 +205,7 @@ float calculateLinearSpeed(float angularSpeed);
 
 // PI Control
 PIControllerResult updatePIController(float setPoint, float currentSpeed, float integralError, float kp, float ki);
-PIPositionResult updatePIPositionController(float setPoint, float currentPosition, float integralError, float kp, float ki);
+PIControllerResult updatePIPositionController(float setPoint, float currentPosition, float integralError, float kp, float ki);
 void initializeRateLimiter(RateLimiter *rl, float rateUp, float rateDown, float deltaTime);
 float rateLimiter(RateLimiter *rl, float input);
 int sgn(float value); 
@@ -183,6 +213,18 @@ int sgn(float value);
 void setup() {
   
   Serial.begin(115200);
+  if (!LittleFS.begin(true)) {
+      Serial.println("LittleFS mount failed!");
+      return;
+  }
+  Serial.println("Loading Robot Configuration...");
+  if (loadConfig("/robot.json", robot)) {
+      Serial.println("Robot configuration loaded successfully!");
+  } else {
+      Serial.println("Failed to load configuration!");
+  }
+
+  Serial.print("Robot ID: "); Serial.println(robot.id);
   motorsInit();
   encodersInit();
   //RateLimiters
@@ -200,6 +242,7 @@ void setup() {
 
 
 void loop() {
+  Serial.print("Robot ID: "); Serial.println(robot.id);
   //Initialize mqtt
   if (!client.connected()) {
     reconnectMqtt();
@@ -246,8 +289,8 @@ void loop() {
     PIControllerResult leftPI = updatePIController(leftSetPointLimited, leftCurrentSpeed, leftIntegralError, leftKp, leftKi);
     PIControllerResult rightPI = updatePIController(rightSetPointLimited, rightCurrentSpeed, rightIntegralError, rightKp, rightKi);
 
-    leftDutyCycle = constrain(leftPI.dutyCycle + leftCoulombFriction*sgn(leftSetPoint),-100,100);
-    rightDutyCycle = constrain(rightPI.dutyCycle + rightCoulombFriction*sgn(rightSetPoint),-100,100);
+    leftDutyCycle = constrain(leftPI.value + leftCoulombFriction*sgn(leftSetPoint),-100,100);
+    rightDutyCycle = constrain(rightPI.value + rightCoulombFriction*sgn(rightSetPoint),-100,100);
     // Compensar las oscilaciones de la rueda cuando la velocidad es 0
     leftIntegralError = leftPI.integralError;
     if(leftCurrentSpeed==0)leftIntegralError = 0;
@@ -265,15 +308,15 @@ void loop() {
     publish = true;
 
     //Update Position controller
-    PIPositionResult leftPosPI = updatePIPositionController(leftPosSetPoint, leftAngularPos, leftPosIntegralError, leftPosKp, leftPosKi);
-    PIPositionResult rightPosPI = updatePIPositionController(rightPosSetPoint, rightAngularPos, rightPosIntegralError, rightPosKp, rightPosKi);
+    PIControllerResult leftPosPI = updatePIPositionController(leftPosSetPoint, leftAngularPos, leftPosIntegralError, leftPosKp, leftPosKi);
+    PIControllerResult rightPosPI = updatePIPositionController(rightPosSetPoint, rightAngularPos, rightPosIntegralError, rightPosKp, rightPosKi);
     leftPosIntegralError = constrain(leftPosPI.integralError,-10,10);
     rightPosIntegralError = constrain(rightPosPI.integralError,-10, 10);
 
-    leftSetPoint = constrain(leftPosPI.angularSpeed + leftMinSpeed*sgn(leftPosPI.angularSpeed), -PI, PI);
+    leftSetPoint = constrain(leftPosPI.value + leftMinSpeed*sgn(leftPosPI.value), -PI, PI);
     // Error que se acepta 0.04 rad en el que no hace control (para que no oscile cerca del punto, porque no va a ser exacto)
     if(abs(leftPosSetPoint-leftAngularPos) < 0.1)leftSetPoint=0;
-    rightSetPoint = constrain(rightPosPI.angularSpeed + rightMinSpeed*sgn(leftPosPI.angularSpeed), -PI, PI);
+    rightSetPoint = constrain(rightPosPI.value + rightMinSpeed*sgn(leftPosPI.value), -PI, PI);
     if(abs(rightPosSetPoint-rightAngularPos) < 0.1)rightSetPoint=0;
 
      //Limitate slope
@@ -284,8 +327,8 @@ void loop() {
     PIControllerResult leftPI = updatePIController(leftSetPointLimited, leftCurrentSpeed, leftIntegralError, leftKp, leftKi);
     PIControllerResult rightPI = updatePIController(rightSetPointLimited, rightCurrentSpeed, rightIntegralError, rightKp, rightKi);
 
-    leftDutyCycle = constrain(leftPI.dutyCycle + leftCoulombFriction*sgn(leftSetPoint),-100,100);
-    rightDutyCycle = constrain(rightPI.dutyCycle + rightCoulombFriction*sgn(rightSetPoint),-100,100);
+    leftDutyCycle = constrain(leftPI.value + leftCoulombFriction*sgn(leftSetPoint),-100,100);
+    rightDutyCycle = constrain(rightPI.value + rightCoulombFriction*sgn(rightSetPoint),-100,100);
     leftIntegralError = leftPI.integralError;
     if(leftCurrentSpeed==0)leftIntegralError = 0;
     rightIntegralError = rightPI.integralError;
@@ -542,7 +585,7 @@ PIControllerResult updatePIController(float setPoint, float currentSpeed, float 
 }
 
 //Position control
-PIPositionResult updatePIPositionController(float setPoint, float currentPosition, float integralError, float kp, float ki){
+PIControllerResult updatePIPositionController(float setPoint, float currentPosition, float integralError, float kp, float ki){
 
   //Calculate error
   float error = setPoint - currentPosition;
