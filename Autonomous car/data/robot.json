@@ -37,9 +37,7 @@
             "ki":5,
             "coulombFriction":40,
             "setPosition": "PI"
-        }, 
-        "rateUp": 8,
-        "rateDown":8
+        } 
     },
     "position":{
         "left":{
@@ -52,6 +50,16 @@
             "ki":0,
             "minSpeed":0.5
         }
+    }
+},
+"rateLimiter":{
+    "left":{
+        "rateUp": 8,
+        "rateDown":8
+    },
+    "right":{
+        "rateUp": 8,
+        "rateDown": 8
     }
 }
 }

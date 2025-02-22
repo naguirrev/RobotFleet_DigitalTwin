@@ -1,0 +1,65 @@
+{
+    "id" : "car1",
+    "wheelRadius": 0.03,
+    "motorPin":{
+        "left": {
+            "in1": 2,
+            "in2": 15,
+            "ena": 4
+        },
+        "right": {
+            "in1": 14,
+            "in2": 12,
+            "ena": 13
+        }
+    },
+    "encoder":{
+        "ppr": 960,
+        "left":{
+            "pinA": 35,
+            "pinB":34
+        },
+        "right":{
+            "pinA": 33,
+            "pinB":32
+        }
+    },
+    "pid":{
+        "speed":{
+            "left":{
+                "kp":13.2,
+                "ki":5,
+                "coulombFriction":40, 
+                "setPosition": "PI"
+            },
+            "right":{
+                "kp":13.2,
+                "ki":5,
+                "coulombFriction":40,
+                "setPosition": "PI"
+            } 
+        },
+        "position":{
+            "left":{
+                "kp":2.5,
+                "ki":0,
+                "minSpeed": 0.5
+            },
+            "right":{
+                "kp":2.5,
+                "ki":0,
+                "minSpeed":0.5
+            }
+        }
+    },
+    "rateLimiter":{
+        "left":{
+            "rateUp": 8,
+            "rateDown":8
+        },
+        "right":{
+            "rateUp": 8,
+            "rateDown": 8
+        }
+    }
+    }

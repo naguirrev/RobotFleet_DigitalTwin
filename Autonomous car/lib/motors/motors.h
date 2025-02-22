@@ -1,5 +1,12 @@
 #include <Arduino.h>
 
+// Setting PWM properties
+#define PWM_FREQ 30000
+#define PWM_CHANNEL 0
+#define PWM_RESOLUTION 8
+
+const float loopTime = 0.01; // The time it takes for one complete loop cycle in seconds
+
 // Robot components
 struct Motor
 {
@@ -23,29 +30,35 @@ struct PIspeed
 {
     float kp;                     // Proportional gain
     float ki;                     // Integral gain
-    float integralError;          // Accumulated integral error for correction
-    
+
     int coulombFriction;          // Coulomb friction compensation value
-    float setPosition;            // Desired position (setpoint)
+
+    float integralError;          // Accumulated integral error for correction
     float previousError;          // Previous error value (for derivative calculation)
     float previousIntegralOutput; // Previous integral output (for stability)
+    
+    float currentSpeed;
+    float setPoint;            // Desired position (setpoint)
 };
 
 struct PIposition
 {
     float kp;                     // Proportional gain
     float ki;                     // Integral gain
+    
     float minSpeed;               // Minimum speed to apply correction
+    
     float integralError;          // Accumulated integral error for correction
+
+    float currentPosition;
+    float setPoint;
 };
 
 struct RateLimiter {
     float rateUp;                 // Maximum increment limit (R_up)
     float rateDown;               // Maximum decrement limit (R_down)
     float previousOutput;         // Previous output (y(t-Δt))
-    float deltaTime;              // Time interval (Δt)
 };
-
 
 struct PIControllerResult {
     float value;                  // Output value of the PI controller
@@ -56,10 +69,45 @@ struct Robot
 {
     String id;
     float wheelRadius;
+    int encoderPPR;
     Motor leftMotor, rightMotor;
     Encoder leftEncoder, rightEncoder;
     PIspeed leftPIDspeed, rightPIDspeed;
-    PIposition leftPIDposition, rightPIDposition;   
+    PIposition leftPIDposition, rightPIDposition;
+    RateLimiter leftRateLimiter, rightRateLimiter;   
 };
 
+
+//Read config
+void initRobot();
+
+//Motors
+void motorsInit();
+void leftMotorControl(float dutyCycle);
+void rightMotorControl(float dutyCycle);
+void stop();
+
+//Encoders
+void encodersInit();
+void leftPulsesCounter();
+void rightPulsesCounter();
+void resetEncodersPulses();
+
+//Odometry
+float calculateAngularPosition(int pulsesCount);
+float calculateLinearPosition(float angularPosition);
+float calculateAngularSpeed(int pulsesCount, float timeCount);
+float calculateLinearSpeed(float angularSpeed);
+void updateAngularSpeed(float deltaTime);
+void updateAngularPosition();
+
+// PI Control
+PIControllerResult updatePIController(float setPoint, float currentValue, float integralError, float kp, float ki);
+void updatePIspeedController();
+void updatePIpositionController();
+float rateLimiter(RateLimiter *rl, float input);
+int sgn(float value); 
+
+//Plot
+void logRobotControlInfoToSerial();
 
