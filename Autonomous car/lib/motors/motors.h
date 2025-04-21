@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <globals.h>
 
 // Setting PWM properties
 #define PWM_FREQ 30000
@@ -7,6 +8,14 @@
 
 const float loopTime = 0.01; // The time it takes for one complete loop cycle in seconds
 
+// Robot states
+struct Pose
+{
+    int row;
+    int col;
+    Orientation orientation;
+
+};
 // Robot components
 struct Motor
 {
@@ -19,6 +28,7 @@ struct Motor
 
 struct Encoder
 {
+    int ppr;
     int pinA;                      // Encoder signal pin A
     int pinB;                      // Encoder signal pin B
     volatile byte pinALastState;   // Last recorded state of pin A (for edge detection)
@@ -69,22 +79,26 @@ struct Robot
 {
     String id;
     float wheelRadius;
-    int encoderPPR;
     Motor leftMotor, rightMotor;
     Encoder leftEncoder, rightEncoder;
     PIspeed leftPIDspeed, rightPIDspeed;
     PIposition leftPIDposition, rightPIDposition;
     RateLimiter leftRateLimiter, rightRateLimiter;   
+    Pose pose;
+    RobotState state;
+    ControlMode mode;
 };
 
+//Variables 
+extern Robot robot;
 
 //Read config
 void initRobot();
 
 //Motors
 void motorsInit();
-void leftMotorControl(float dutyCycle);
-void rightMotorControl(float dutyCycle);
+void leftMotorControl();
+void rightMotorControl();
 void stop();
 
 //Encoders
@@ -94,9 +108,9 @@ void rightPulsesCounter();
 void resetEncodersPulses();
 
 //Odometry
-float calculateAngularPosition(int pulsesCount);
+float calculateAngularPosition(int pulsesCount, int ppr);
 float calculateLinearPosition(float angularPosition);
-float calculateAngularSpeed(int pulsesCount, float timeCount);
+float calculateAngularSpeed(int pulsesCount, float timeCount, int ppr);
 float calculateLinearSpeed(float angularSpeed);
 void updateAngularSpeed(float deltaTime);
 void updateAngularPosition();

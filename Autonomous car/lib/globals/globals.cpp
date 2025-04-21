@@ -13,7 +13,6 @@ bool readFileAsJson(JsonDocument doc, const char* filename){
       return false;
     }
 
-    JsonDocument doc;  
     DeserializationError error = deserializeJson(doc, file);
     file.close();
     

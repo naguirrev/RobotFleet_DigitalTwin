@@ -14,12 +14,13 @@
     }
 },
 "encoder":{
-    "ppr": 960,
     "left":{
+        "ppr": 960,
         "pinA": 35,
         "pinB":34
     },
     "right":{
+        "ppr": 960,
         "pinA": 33,
         "pinB":32
     }

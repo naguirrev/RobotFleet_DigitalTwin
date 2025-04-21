@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include <globals.h>
 #include <motors.h>
 
 Robot robot;
@@ -20,8 +19,8 @@ void initRobot() {
     robot.rightMotor = { doc["motorPin"]["right"]["in1"], doc["motorPin"]["right"]["in2"], doc["motorPin"]["right"]["ena"], 0, 0 };
   
     // Encoders
-    robot.leftEncoder = { doc["encoder"]["left"]["pinA"], doc["encoder"]["left"]["pinB"], 0, 0, 0 };
-    robot.rightEncoder = { doc["encoder"]["right"]["pinA"], doc["encoder"]["right"]["pinB"], 0, 0, 0 };
+    robot.leftEncoder = { doc["encoder"]["left"]["ppr"], doc["encoder"]["left"]["pinA"], doc["encoder"]["left"]["pinB"], 0, 0, 0 };
+    robot.rightEncoder = { doc["encoder"]["right"]["ppr"], doc["encoder"]["right"]["pinA"], doc["encoder"]["right"]["pinB"], 0, 0, 0 };
   
     // PID Speed
     robot.leftPIDspeed = { doc["pid"]["speed"]["left"]["kp"], doc["pid"]["speed"]["left"]["ki"],
@@ -86,15 +85,15 @@ void motorControl(int pin1, int pin2, int pinEnable, int dutyCycle){
   ledcWrite(pinEnable, pwm);
 
 }
-void leftMotorControl(float dutyCycle){
-  motorControl(robot.leftMotor.in1, robot.leftMotor.in2, robot.leftMotor.ena, dutyCycle);
+void leftMotorControl(){
+  motorControl(robot.leftMotor.in1, robot.leftMotor.in2, robot.leftMotor.ena, robot.leftMotor.dutyCycle);
 }
-void rightMotorControl(float dutyCycle){
-  motorControl(robot.rightMotor.in1, robot.rightMotor.in2, robot.rightMotor.ena, dutyCycle);
+void rightMotorControl(){
+  motorControl(robot.rightMotor.in1, robot.rightMotor.in2, robot.rightMotor.ena, robot.rightMotor.dutyCycle);
 }
 void stop(){
-  leftMotorControl(0);
-  rightMotorControl(0);
+  leftMotorControl();
+  rightMotorControl();
 }
 
 //Encoders
@@ -154,8 +153,8 @@ void resetEncodersPulses(){
 
 
 // Odometry
-float calculateAngularPosition(int pulsesCount){
-  float radiansByStep = (2 * PI) / robot.encoderPPR; // 360º = 2PIrad / pulsesEncoder --> radianes que avanza cada pulso
+float calculateAngularPosition(int pulsesCount, int ppr){
+  float radiansByStep = (2 * PI) / ppr; // 360º = 2PIrad / pulsesEncoder --> radianes que avanza cada pulso
   return pulsesCount * radiansByStep;
 }
 
@@ -163,8 +162,8 @@ float calculateLinearPosition(float angularPosition){
   return angularPosition * robot.wheelRadius;
 }
 
-float calculateAngularSpeed(int pulsesCount, float timeCount){
-  float radiansByStep = (2 * PI) / robot.encoderPPR;
+float calculateAngularSpeed(int pulsesCount, float timeCount, int ppr){
+  float radiansByStep = (2 * PI) / ppr;
   return (pulsesCount * radiansByStep) / timeCount; // angular speed
 }
 
@@ -174,13 +173,13 @@ float calculateLinearSpeed(float angularSpeed){
 }
 
 void updateAngularSpeed(float deltaTime){
-  robot.leftPIDspeed.currentSpeed = calculateAngularSpeed(robot.leftEncoder.pulses/2, deltaTime);
-  robot.rightPIDspeed.currentSpeed = calculateAngularSpeed(robot.rightEncoder.pulses/2, deltaTime);
+  robot.leftPIDspeed.currentSpeed = calculateAngularSpeed(robot.leftEncoder.pulses/2, deltaTime, robot.leftEncoder.ppr);
+  robot.rightPIDspeed.currentSpeed = calculateAngularSpeed(robot.rightEncoder.pulses/2, deltaTime, robot.rightEncoder.ppr);
 }
 
 void updateAngularPosition(){
-  robot.leftPIDposition.currentPosition = calculateAngularPosition(robot.leftEncoder.totalPulses/2);
-  robot.rightPIDposition.currentPosition =  calculateAngularPosition(robot.rightEncoder.totalPulses/2);
+  robot.leftPIDposition.currentPosition = calculateAngularPosition(robot.leftEncoder.totalPulses/2, robot.leftEncoder.ppr);
+  robot.rightPIDposition.currentPosition =  calculateAngularPosition(robot.rightEncoder.totalPulses/2, robot.rightEncoder.ppr);
 }
 
 
@@ -202,6 +201,7 @@ void updatePIpositionController(){
   //Update Position controller
   PIControllerResult leftPosPI = updatePIController(robot.leftPIDposition.setPoint, robot.leftPIDposition.currentPosition, robot.leftPIDposition.integralError, robot.leftPIDposition.kp, robot.leftPIDposition.ki);
   PIControllerResult rightPosPI = updatePIController(robot.rightPIDposition.setPoint, robot.rightPIDposition.currentPosition, robot.rightPIDposition.integralError, robot.rightPIDposition.kp, robot.rightPIDposition.ki);
+  //Anti windup (acciones integrales para evitar que se desborde -cond error - lento para volver)
   robot.leftPIDposition.integralError = constrain(leftPosPI.integralError,-10,10);
   robot.rightPIDposition.integralError = constrain(rightPosPI.integralError,-10, 10);
 
@@ -231,8 +231,8 @@ void updatePIspeedController(){
 
   //Serial.printf("LIE: %.2f RIE %.2f ", leftIntegralError, rightIntegralError);
   //Update speed
-  leftMotorControl(robot.leftMotor.dutyCycle); //Cosas raras
-  rightMotorControl(robot.rightMotor.dutyCycle);
+  leftMotorControl(); //Cosas raras
+  rightMotorControl();
 }
 
 //Rate limiter

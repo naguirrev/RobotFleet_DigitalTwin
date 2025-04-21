@@ -2,7 +2,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <motors.h>
-#include<mqtt.h>
+#include <mqtt.h>
 
 // --- Timers ---
 unsigned long lastControlTime = 0;
@@ -12,6 +12,10 @@ int mode = 1;
 //Plot
 bool publish = true; 
 
+// --- Functions declaration ---
+void setControlMode(int mode);
+
+// --- MAIN: setup and loop ---
 void setup() {
   
   Serial.begin(115200);
@@ -57,14 +61,15 @@ void loop() {
   //Publish to mqtt topics
   if (publish){
     logRobotControlInfoToSerial();
-    publishSpeedMqtt(robot.leftPIDspeed.currentSpeed, robot.rightPIDspeed.currentSpeed);
+    publishControllerSpeedData();
   }
   
+  delay(10); // Small delay for stability 
 
-  delay(10); // Small delay for stability (adjust as necessary)
 }
 
 
+// --- Functions definition ---
 void setControlMode(int mode){
   switch (mode)
   {
@@ -77,8 +82,8 @@ void setControlMode(int mode){
   case 1:{
     //Open-loop control: read duty cycle and set car pwm
     publish = true;
-    leftMotorControl(robot.leftMotor.dutyCycle);
-    rightMotorControl(robot.rightMotor.dutyCycle);
+    leftMotorControl();
+    rightMotorControl();
     break;
     }
   case 2:{
