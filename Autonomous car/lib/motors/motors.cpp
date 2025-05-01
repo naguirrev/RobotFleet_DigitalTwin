@@ -13,6 +13,7 @@ void initRobot() {
     // Load data at Robot struct
     robot.id = doc["id"].as<String>();
     robot.wheelRadius = doc["wheelRadius"].as<float>();
+    robot.wheelBase = doc["wheelBase"].as<float>();
   
     // Motors
     robot.leftMotor = { doc["motorPin"]["left"]["in1"], doc["motorPin"]["left"]["in2"], doc["motorPin"]["left"]["ena"], 0, 0 };
@@ -162,6 +163,10 @@ float calculateLinearPosition(float angularPosition){
   return angularPosition * robot.wheelRadius;
 }
 
+float linearPositionToAngularPosition(float meters){
+  return meters / robot.wheelRadius;
+}
+
 float calculateAngularSpeed(int pulsesCount, float timeCount, int ppr){
   float radiansByStep = (2 * PI) / ppr;
   return (pulsesCount * radiansByStep) / timeCount; // angular speed
@@ -201,20 +206,32 @@ void updatePIpositionController(){
   //Update Position controller
   PIControllerResult leftPosPI = updatePIController(robot.leftPIDposition.setPoint, robot.leftPIDposition.currentPosition, robot.leftPIDposition.integralError, robot.leftPIDposition.kp, robot.leftPIDposition.ki);
   PIControllerResult rightPosPI = updatePIController(robot.rightPIDposition.setPoint, robot.rightPIDposition.currentPosition, robot.rightPIDposition.integralError, robot.rightPIDposition.kp, robot.rightPIDposition.ki);
-  //Anti windup (acciones integrales para evitar que se desborde -cond error - lento para volver)
+  //Anti windup (acciones integrales para evitar que se desborde -si se desborda entra en condición error y es muy lento para recuperarse)
   robot.leftPIDposition.integralError = constrain(leftPosPI.integralError,-10,10);
   robot.rightPIDposition.integralError = constrain(rightPosPI.integralError,-10, 10);
 
   robot.leftPIDspeed.setPoint = constrain(leftPosPI.value + robot.leftPIDposition.minSpeed*sgn(leftPosPI.value), -PI, PI);
-  // Error que se acepta 0.04 rad en el que no hace control (para que no oscile cerca del punto, porque no va a ser exacto)
-  if(abs(robot.leftPIDposition.setPoint-robot.leftPIDposition.currentPosition) < 0.1)robot.leftPIDspeed.setPoint=0; //Aqui estamos mezclando set point de posicion y velocidad--comprobar que tiene sentido
+  // Error que se acepta 0.01 rad en el que no hace control (para que no oscile cerca del punto, porque no va a ser exacto)
+  if(abs(robot.leftPIDposition.setPoint-robot.leftPIDposition.currentPosition) < 0.1){
+    robot.leftPIDspeed.setPoint=0; //Si esta dentro del error aceptable se debe detener.
+    //Reset current position y set point (trabajamos con posiciones relativas a casa paso)
+    robot.leftPIDposition.setPoint = 0;
+    robot.leftPIDposition.currentPosition = 0;
+    robot.leftEncoder.totalPulses = 0;
+  }
+  
   robot.rightPIDspeed.setPoint = constrain(rightPosPI.value + robot.rightPIDposition.minSpeed*sgn(leftPosPI.value), -PI, PI);
-  if(abs(robot.rightPIDposition.setPoint-robot.rightPIDposition.currentPosition) < 0.1)robot.rightPIDspeed.setPoint=0;
+  if(abs(robot.rightPIDposition.setPoint-robot.rightPIDposition.currentPosition) < 0.1){
+    robot.rightPIDspeed.setPoint=0;
+    robot.rightPIDposition.setPoint= 0;
+    robot.rightPIDposition.currentPosition = 0;
+    robot.rightEncoder.totalPulses = 0;
+  }
 }
 
 void updatePIspeedController(){
   //Limitate slope
-  float leftSetPointLimited = rateLimiter(&robot.leftRateLimiter, robot.leftPIDspeed.setPoint); // TODO: setPosition?
+  float leftSetPointLimited = rateLimiter(&robot.leftRateLimiter, robot.leftPIDspeed.setPoint); 
   float rightSetPointLimited = rateLimiter(&robot.rightRateLimiter, robot.rightPIDspeed.setPoint);
 
   // Update PI controller
@@ -258,6 +275,47 @@ float rateLimiter(RateLimiter *rl, float input) {
   // Return the constrained output value
   return rl->previousOutput;
 }
+
+//NAVIGATION
+float calculateRadiansRotation(float angle){
+  //Transformar grados a radianes
+  float theta = abs(angle) * PI / 180;
+
+  // Calcular distancia que debe recorrer cada rueda
+  float distance = (robot.wheelBase / 2.0) * theta; // (L/2)*theta
+
+  // Convertir distancia a radianes de rueda
+  float angularDisplacement = distance / robot.wheelRadius; // radianes que deben girar las ruedas
+
+  return angularDisplacement;
+
+}
+
+void forward(float meters){
+  float angularPos = linearPositionToAngularPosition(meters);
+  robot.leftPIDposition.setPoint = angularPos;
+  robot.rightPIDposition.setPoint = angularPos;
+}
+void turn(float angle){
+  float angularDisplacement = calculateRadiansRotation(angle);
+  robot.leftPIDposition.setPoint = sgn(angle) * angularDisplacement;
+  robot.rightPIDposition.setPoint = sgn(angle) * -angularDisplacement;
+}
+void processAction(String action, float value){
+  if (action.equalsIgnoreCase("forward")){
+    forward(value);
+  }
+  else if(action.equalsIgnoreCase("turn")){
+    turn(value);
+  }
+  else if(action.equalsIgnoreCase("stop")){
+    stop();
+  }else{
+    Serial.println("Unrecognized action");
+  }
+
+}
+
 
 //Plot
 void logRobotControlInfoToSerial(){

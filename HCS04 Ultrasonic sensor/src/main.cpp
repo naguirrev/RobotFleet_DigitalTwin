@@ -1,7 +1,9 @@
 #include <Arduino.h>
 
-#define TRIG_PIN 19   // Pin TRIG
-#define ECHO_PIN 18   // Pin ECHO
+#define TRIG_PIN 17   // Pin TRIG
+#define ECHO_PIN 16   // Pin ECHO
+#define MIN_DISTANCE 3
+#define MAX_DISTANCE 7
 
 void setup() {
   Serial.begin(115200);
@@ -21,13 +23,15 @@ void loop() {
   // Leer el pulso de retorno
   long duration = pulseIn(ECHO_PIN, HIGH);
 
-  // Calcular la distancia (velocidad del sonido = 343 m/s)
-  long distance = (duration * 0.0343) / 2;  // Dividir entre 2 porque el pulso viaja de ida y vuelta
+  // Calcular la distancia
+  long distance = (duration * 0.0343) / 2;
 
-  Serial.print("Distancia: ");
-  Serial.print(distance);
-  Serial.println(" cm");
+  // Detección de obstáculos
+  if (distance >= MIN_DISTANCE && distance <= MAX_DISTANCE) {
+    Serial.print("Obstacle detected at ");
+    Serial.print(distance);
+    Serial.println(" cm");
+  }
 
-  delay(500);  // Espera medio segundo antes de la siguiente medición
+  delay(500);  // Esperar medio segundo antes de medir otra vez
 }
-

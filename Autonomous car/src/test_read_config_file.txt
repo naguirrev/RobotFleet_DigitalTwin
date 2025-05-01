@@ -1,0 +1,72 @@
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include <LittleFS.h>
+#include <motors.h>
+#include <mqtt.h>
+
+//Testing read robot config
+
+String testString;
+int testInt;
+float testFloat;
+void initTest();
+// --- MAIN: setup and loop ---
+void setup() {
+  delay(1000);
+  Serial.begin(115200);
+  delay(1000);
+  //Mount mqtt
+  if (!LittleFS.begin(true)) {
+      Serial.println("LittleFS mount failed!");
+      while (1);
+  }
+  //Load config from files
+  initTest();
+
+  Serial.print("Initializing system...");
+}
+
+void loop() {
+  
+  Serial.println("Check reading variables:");
+  Serial.print("String: ");
+  Serial.println(testString);
+  Serial.print("Integer: ");
+  Serial.println(testInt);
+  Serial.print("Float: ");
+  Serial.println(testFloat);
+
+  
+  delay(3600); // Small delay for stability 
+
+}
+
+
+void initTest() {    
+  JsonDocument doc;  
+  bool result = readFileAsJson(doc, "/test.json");
+  if(result){
+
+    //REading different varaubles
+    testString = doc["string"].as<String>();
+    testInt = doc["int"];
+    testFloat = doc["float"].as<float>();
+
+    Serial.println("Test file read succesfully!");
+
+  }else 
+  {
+     Serial.println("Fail reading test file!");
+  }
+}
+
+
+  
+
+
+
+
+
+
+
+

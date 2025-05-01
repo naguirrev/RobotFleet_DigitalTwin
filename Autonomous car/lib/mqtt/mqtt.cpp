@@ -56,9 +56,8 @@ void callbackMqtt(char* topic, byte* payload, unsigned int length) {
   
     processMqttMessage(topic, payload, length);
   }  
-const char* getTopic (const char* value){
-  String  topic = mqtt_base + robot.id + value;
-  return topic.c_str();
+String getTopic (const char* value){
+  return mqtt_base + robot.id + value;
 }
 
 void reconnectMqtt() {
@@ -68,20 +67,20 @@ void reconnectMqtt() {
         Serial.println("Connecting...");
         //Subscribe to required topics
         
-        client.subscribe(getTopic(mqtt_mode));
-        client.subscribe(getTopic(mqtt_encoder_left_set));
-        client.subscribe(getTopic(mqtt_encoder_right_set));
-        client.subscribe(getTopic(mqtt_ultrasonic_set));
-        client.subscribe(getTopic(mqtt_rfid_set));
-        client.subscribe(getTopic(mqtt_controller_speed_left_set));
-        client.subscribe(getTopic(mqtt_controller_speed_right_set));
-        client.subscribe(getTopic(mqtt_controller_speed_command_setpoint));
-        client.subscribe(getTopic(mqtt_controller_position_left_set));
-        client.subscribe(getTopic(mqtt_controller_position_right_set));
-        client.subscribe(getTopic(mqtt_controller_position_command_setpoint));
-        client.subscribe(getTopic(mqtt_actuator_motor_set));
-        client.subscribe(getTopic(mqtt_navigation_path_set));
-        client.subscribe(getTopic(mqtt_navigation_command));
+        client.subscribe(getTopic(mqtt_mode).c_str());
+        client.subscribe(getTopic(mqtt_encoder_left_set).c_str());
+        client.subscribe(getTopic(mqtt_encoder_right_set).c_str());
+        client.subscribe(getTopic(mqtt_ultrasonic_set).c_str());
+        client.subscribe(getTopic(mqtt_rfid_set).c_str());
+        client.subscribe(getTopic(mqtt_controller_speed_left_set).c_str());
+        client.subscribe(getTopic(mqtt_controller_speed_right_set).c_str());
+        client.subscribe(getTopic(mqtt_controller_speed_command_setpoint).c_str());
+        client.subscribe(getTopic(mqtt_controller_position_left_set).c_str());
+        client.subscribe(getTopic(mqtt_controller_position_right_set).c_str());
+        client.subscribe(getTopic(mqtt_controller_position_command_setpoint).c_str());
+        client.subscribe(getTopic(mqtt_actuator_motor_set).c_str());
+        client.subscribe(getTopic(mqtt_navigation_path_set).c_str());
+        client.subscribe(getTopic(mqtt_navigation_command).c_str());
         
       } else {
         Serial.print("Error connecting to MQTT broker, rc=");
@@ -132,79 +131,79 @@ void processMqttMessage(char* topic, byte* payload, unsigned int length){
     char message[length + 1];
     memcpy(message, payload, length);
     message[length] = '\0'; // Añadir terminador nulo para que sea una cadena válida
-  
+
     //Robot: Control mode
-    if (strcmp(topic, getTopic(mqtt_mode)) == 0) {
+    if (strcmp(topic, getTopic(mqtt_mode).c_str()) == 0) {
       int m = atoi(message);
       mode = m;
       Serial.print("Mode set to: ");
       Serial.println(m);
-    }
+    } 
 
     //Encoder
-    else if(strcmp(topic, mqtt_encoder_left_set)){
+    else if(strcmp(topic, getTopic(mqtt_encoder_left_set).c_str()) == 0){
 
     }
-    else if(strcmp(topic, mqtt_encoder_right_set)){
+    else if(strcmp(topic, getTopic(mqtt_encoder_right_set).c_str()) == 0){
 
     }
     //Ultrasonic
-    else if(strcmp(topic, mqtt_ultrasonic_set)){
+    else if(strcmp(topic, getTopic(mqtt_ultrasonic_set).c_str()) == 0){
 
     }
     //RFID
-    else if(strcmp(topic, mqtt_rfid_set)){
+    else if(strcmp(topic, getTopic(mqtt_rfid_set).c_str()) == 0){
 
     }
     //Controller: speed (set, command)
-    else if (strcmp(topic, mqtt_controller_speed_left_set) == 0) {
+    else if (strcmp(topic, getTopic(mqtt_controller_speed_left_set).c_str()) == 0) {
       JsonDocument jsonDoc = readAsJson(message);
-      if (jsonDoc.containsKey("kp")){
+      if (jsonDoc["kp"].is<float>()){
         float kp = jsonDoc["kp"];
         robot.leftPIDspeed.kp = kp;
       }
-      if (jsonDoc.containsKey("ki")){
+      if (jsonDoc["ki"].is<float>()){
         float ki = jsonDoc["ki"];
         robot.leftPIDspeed.ki = ki;
       }
-      if (jsonDoc.containsKey("coulombFriction")){
+      if (jsonDoc["coulombFriction"].is<float>()){
         float coulombFriction = jsonDoc["coulombFriction"];
         robot.leftPIDspeed.coulombFriction = coulombFriction;
       }
-      if (jsonDoc.containsKey("rateUp")){
+      if (jsonDoc["rateUp"].is<float>()){
         float rateUp = jsonDoc["rateUp"];
         robot.leftRateLimiter.rateUp = rateUp;
       }
-      if (jsonDoc.containsKey("rateDown")){
+      if (jsonDoc["rateDown"].is<float>()){
         float rateDown = jsonDoc["rateDown"];
         robot.leftRateLimiter.rateDown = rateDown;
       }
 
     }
-    else if (strcmp(topic, mqtt_controller_speed_right_set) == 0) {
+    else if (strcmp(topic, getTopic(mqtt_controller_speed_right_set).c_str()) == 0) {
       JsonDocument jsonDoc = readAsJson(message);
-      if (jsonDoc.containsKey("kp")){
+      if (jsonDoc["kp"].is<float>()){
         float kp = jsonDoc["kp"];
         robot.rightPIDspeed.kp = kp;
       }
-      if (jsonDoc.containsKey("ki")){
+      if (jsonDoc["ki"].is<float>()){
         float ki = jsonDoc["ki"];
         robot.rightPIDspeed.ki = ki;
       }
-      if (jsonDoc.containsKey("coulombFriction")){
+      if (jsonDoc["coulombFriction"].is<float>()){
         float coulombFriction = jsonDoc["coulombFriction"];
         robot.rightPIDspeed.coulombFriction = coulombFriction;
       }
-      if (jsonDoc.containsKey("rateUp")){
+      if (jsonDoc["rateUp"].is<float>()){
         float rateUp = jsonDoc["rateUp"];
         robot.rightRateLimiter.rateUp = rateUp;
       }
-      if (jsonDoc.containsKey("rateDown")){
+      if (jsonDoc["rateDown"].is<float>()){
         float rateDown = jsonDoc["rateDown"];
         robot.rightRateLimiter.rateDown = rateDown;
       }
     }
-    else if (strcmp(topic, mqtt_controller_speed_command_setpoint) == 0) {
+    else if (strcmp(topic, getTopic(mqtt_controller_speed_command_setpoint).c_str()) == 0) {
       JsonDocument jsonDoc = readAsJson(message);
       float leftSetPoint = jsonDoc["left"];
       float rightSetPoint = jsonDoc["right"];
@@ -213,30 +212,30 @@ void processMqttMessage(char* topic, byte* payload, unsigned int length){
     
     //Controller: position (set, command)
     }
-    else if (strcmp(topic, mqtt_controller_position_left_set) == 0) {
+    else if (strcmp(topic, getTopic( mqtt_controller_position_left_set).c_str()) == 0) {
       JsonDocument jsonDoc = readAsJson(message);
       
-      if (jsonDoc.containsKey("kp")){
+      if (jsonDoc["kp"].is<float>()){
         float kp = jsonDoc["kp"];
         robot.leftPIDposition.kp = kp;
       }
-      if (jsonDoc.containsKey("ki")){
+      if (jsonDoc["ki"].is<float>()){
         float ki = jsonDoc["ki"];
         robot.leftPIDposition.ki = ki;
       }
     }
-    else if (strcmp(topic, mqtt_controller_position_right_set) == 0) {
+    else if (strcmp(topic, getTopic(mqtt_controller_position_right_set).c_str()) == 0) {
       JsonDocument jsonDoc = readAsJson(message);
-      if (jsonDoc.containsKey("kp")){
+      if (jsonDoc["kp"].is<float>()){
         float kp = jsonDoc["kp"];
         robot.rightPIDposition.kp = kp;
       }
-      if (jsonDoc.containsKey("ki")){
+      if (jsonDoc["ki"].is<float>()){
         float ki = jsonDoc["ki"];
         robot.rightPIDposition.ki = ki;
       }
     }
-    else if (strcmp(topic, mqtt_controller_position_command_setpoint) == 0) {
+    else if (strcmp(topic, getTopic(mqtt_controller_position_command_setpoint).c_str()) == 0) {
       JsonDocument jsonDoc = readAsJson(message);
       float leftSetPoint = jsonDoc["left"];
       float rightSetPoint = jsonDoc["right"];
@@ -244,7 +243,7 @@ void processMqttMessage(char* topic, byte* payload, unsigned int length){
       robot.rightPIDposition.setPoint = rightSetPoint;
     }
     //Actuator: motor (set duty cycle)
-    else if (strcmp(topic, mqtt_actuator_motor_set) == 0) {
+    else if (strcmp(topic, getTopic(mqtt_actuator_motor_set).c_str()) == 0) {
       JsonDocument jsonDoc = readAsJson(message);
       // Leer los valores de "left" y "right" del JSON
       float left = jsonDoc["left"]["dutyCycle"];
@@ -253,10 +252,19 @@ void processMqttMessage(char* topic, byte* payload, unsigned int length){
       robot.rightMotor.dutyCycle = right;
     }
     //Navigation: path, command
-    else if(strcmp(topic, mqtt_navigation_path_set) == 0){
+    else if(strcmp(topic, getTopic(mqtt_navigation_path_set).c_str()) == 0){
 
     }
-    else if(strcmp(topic, mqtt_navigation_command) == 0){
+    else if(strcmp(topic, getTopic(mqtt_navigation_command).c_str()) == 0){
+      JsonDocument jsonDoc = readAsJson(message);
+      if (jsonDoc["action"].is<String>() && jsonDoc["value"].is<float>()){
+        String action = jsonDoc["action"];
+        float value = jsonDoc["value"];
+        Serial.println(value);
+        processAction(action, value);
+      } else {
+        Serial.println("Bad request. Invalid message definition");
+      }
 
     }
     else {
@@ -265,10 +273,9 @@ void processMqttMessage(char* topic, byte* payload, unsigned int length){
   }
 
 // Publishing methods
-char* floatToChar(float value){
-  char result[15];
-  dtostrf(value, 5, 2, result);
-  return result;
+char* floatToChar(float value, char* buffer){
+  dtostrf(value, 5, 2, buffer);
+  return buffer;
 }
 
 char* intTochar(int value, char* buffer){
@@ -283,8 +290,8 @@ char* poseToJson(Pose pose, char* buffer){
   return buffer;
 }
 
-char* PISpeedDataToJson(PIspeed piSpeed, char* buffer){
-  snprintf(buffer, sizeof(buffer),
+char* PISpeedDataToJson(PIspeed piSpeed, char* buffer, size_t buffer_size){
+  snprintf(buffer, buffer_size,
            "{\"setPoint\":%.2f,\"currentSpeed\":%.2f,\"integralError\":%.2f}",
            piSpeed.setPoint, piSpeed.currentSpeed, piSpeed.integralError);
   return buffer;
@@ -334,45 +341,49 @@ void publishRfidRaw(){}
 void publishControllerSpeedState(){
   char leftBuffer [100];
   char rightBuffer [100];
-  client.publish(getTopic(mqtt_controller_speed_left_state), PISpeedStateToJson(robot.leftPIDspeed, robot.leftRateLimiter, leftBuffer));
-  client.publish(getTopic(mqtt_controller_speed_right_state), PISpeedStateToJson(robot.rightPIDspeed, robot.rightRateLimiter, rightBuffer));
+  client.publish(getTopic(mqtt_controller_speed_left_state).c_str(), PISpeedStateToJson(robot.leftPIDspeed, robot.leftRateLimiter, leftBuffer));
+  client.publish(getTopic(mqtt_controller_speed_right_state).c_str(), PISpeedStateToJson(robot.rightPIDspeed, robot.rightRateLimiter, rightBuffer));
 
 }
 void publishControllerSpeedData(){
-  char leftBuffer [100];
-  char rightBuffer [100];
-  client.publish(getTopic(mqtt_controller_speed_left_data), PISpeedDataToJson(robot.leftPIDspeed, leftBuffer));
-  client.publish(getTopic(mqtt_controller_speed_right_data), PISpeedDataToJson(robot.rightPIDspeed, rightBuffer));
+  char leftBuffer [150];
+  char rightBuffer [150];
+  client.publish(getTopic(mqtt_controller_speed_left_data).c_str(), PISpeedDataToJson(robot.leftPIDspeed, leftBuffer, sizeof(leftBuffer)));
+  client.publish(getTopic(mqtt_controller_speed_right_data).c_str(), PISpeedDataToJson(robot.rightPIDspeed, rightBuffer, sizeof(rightBuffer)));
 }
 //Controller: position (state, data)
 void publishControllerPositionState(){
   char leftBuffer [100];
   char rightBuffer [100];
-  client.publish(getTopic(mqtt_controller_position_left_state), PIPositionStateToJson(robot.leftPIDposition, leftBuffer));
-  client.publish(getTopic(mqtt_controller_position_right_state), PIPositionStateToJson(robot.rightPIDposition, rightBuffer));
+  client.publish(getTopic(mqtt_controller_position_left_state).c_str(), PIPositionStateToJson(robot.leftPIDposition, leftBuffer));
+  client.publish(getTopic(mqtt_controller_position_right_state).c_str(), PIPositionStateToJson(robot.rightPIDposition, rightBuffer));
 }
 void publishControllerPositionData(){
   char leftBuffer [100];
   char rightBuffer [100];
-  client.publish(getTopic(mqtt_controller_position_left_state), PIPositionDataToJson(robot.leftPIDposition, leftBuffer));
-  client.publish(getTopic(mqtt_controller_position_right_state), PIPositionDataToJson(robot.rightPIDposition, rightBuffer));
+  client.publish(getTopic(mqtt_controller_position_left_state).c_str(), PIPositionDataToJson(robot.leftPIDposition, leftBuffer));
+  client.publish(getTopic(mqtt_controller_position_right_state).c_str(), PIPositionDataToJson(robot.rightPIDposition, rightBuffer));
 
 }
 //Navigation: state
 void publishNavState(Pose pose){
   char buffer[50];
-  client.publish(getTopic(mqtt_navigation_path_state), poseToJson(pose, buffer));
+  client.publish(getTopic(mqtt_navigation_path_state).c_str(), poseToJson(pose, buffer));
 }
 
 //Robot: pose, state, mode
+void publishCurrentMode(){
+  char buffer[50];
+  client.publish(getTopic(mqtt_mode).c_str(), intTochar(robot.mode, buffer));
+}
 void publishCurrentPose(){
   char buffer[50];
-  client.publish(getTopic(mqtt_pose), poseToJson(robot.pose, buffer));
+  client.publish(getTopic(mqtt_pose).c_str(), poseToJson(robot.pose, buffer));
 }
 
 void publishState(){
   char buffer[3];
-  client.publish(getTopic(mqtt_state), intTochar(robot.state, buffer));
+  client.publish(getTopic(mqtt_state).c_str(), intTochar(robot.state, buffer));
 }
   
   

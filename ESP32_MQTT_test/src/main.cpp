@@ -3,15 +3,15 @@
 #include <PubSubClient.h>
 
 // Configuración Wi-Fi
-const char* ssid = "MIWIFI_jPtD_EXT";
-const char* password = "YYPEH4ER";
+const char* ssid = "MOVISTAR-WIFI6-E870";
+const char* password = "stQkjkzFvNqHj8MNhUXh";
 
 // Configuración MQTT
-const char* mqtt_server = "192.168.1.167"; // IP del servidor RabbitMQ
+const char* mqtt_server = "192.168.1.42"; // IP del servidor RabbitMQ
 const int mqtt_port = 1883; // Puerto MQTT
 const char* mqtt_topic = "test/topic"; // Tema MQTT
-const char* mqtt_user = "test"; // Usuario MQTT
-const char* mqtt_password = "test"; // Contraseña MQTT
+const char* mqtt_user = "walle"; // Usuario MQTT
+const char* mqtt_password = "walle3000"; // Contraseña MQTT
 
 WiFiClient espClient;
 PubSubClient client(espClient);

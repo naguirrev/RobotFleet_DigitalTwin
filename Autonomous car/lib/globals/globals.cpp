@@ -5,7 +5,7 @@ void setMode(int m){
   mode = m;
 }
 
-bool readFileAsJson(JsonDocument doc, const char* filename){
+bool readFileAsJson(JsonDocument& doc, const char* filename){
     File file = LittleFS.open(filename, "r");
     if (!file)
     {
@@ -20,5 +20,6 @@ bool readFileAsJson(JsonDocument doc, const char* filename){
         Serial.println("JSON parsing failed!");
         return false;
     }
+    Serial.println("File found and readed as json");
     return true;
 }

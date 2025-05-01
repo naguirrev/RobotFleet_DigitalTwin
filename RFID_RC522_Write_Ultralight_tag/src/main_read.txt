@@ -1,0 +1,70 @@
+//Read RFID tag
+#include <Arduino.h>
+#include <SPI.h>
+#include <MFRC522.h>
+
+// Pines
+#define SS_PIN 5
+#define RST_PIN 22
+
+MFRC522 rfid(SS_PIN, RST_PIN); // Instancia de la clase
+
+void printHex(byte *buffer, byte bufferSize);
+void readUltralightTag();
+
+void setup() {
+  Serial.begin(115200);
+  SPI.begin();          // Inicializa el bus SPI
+  rfid.PCD_Init();      // Inicializa el lector MFRC522
+
+  Serial.println(F("Ready to read MIFARE Ultralight C tags."));
+}
+
+void loop() {
+  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    readUltralightTag();
+    rfid.PICC_HaltA();         // Finaliza comunicación con la tarjeta
+    rfid.PCD_StopCrypto1();    // Detiene comunicación segura
+  }
+}
+
+// Función que lee e imprime el contenido de una tarjeta Ultralight
+void readUltralightTag() {
+  MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
+
+  if (piccType != MFRC522::PICC_TYPE_MIFARE_UL) {
+    Serial.println(F("This tag is not a MIFARE Ultralight C."));
+    return;
+  }
+
+  Serial.println(F("Reading MIFARE Ultralight C tag..."));
+
+  byte buffer[18];
+  byte size = sizeof(buffer);
+
+  // Leer páginas típicas de usuario: 4 a 39
+  for (byte page = 4; page <= 39; page++) {
+    MFRC522::StatusCode status = rfid.MIFARE_Read(page, buffer, &size);
+    if (status != MFRC522::STATUS_OK) {
+      Serial.print(F("Error reading page "));
+      Serial.print(page);
+      Serial.print(F(": "));
+      Serial.println(rfid.GetStatusCodeName(status));
+      continue;
+    }
+
+    Serial.print(F("Page "));
+    Serial.print(page);
+    Serial.print(F(": "));
+    printHex(buffer, 4); // Solo muestra los primeros 4 bytes de cada página
+    Serial.println();
+  }
+}
+
+// Imprime un buffer en formato hexadecimal
+void printHex(byte *buffer, byte bufferSize) {
+  for (byte i = 0; i < bufferSize; i++) {
+    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+    Serial.print(buffer[i], HEX);
+  }
+}

@@ -8,7 +8,7 @@
 unsigned long lastControlTime = 0;
 unsigned long currentTime = 0;
 //Mode
-int mode = 1;
+int mode = 3;
 //Plot
 bool publish = true; 
 
@@ -60,7 +60,7 @@ void loop() {
 
   //Publish to mqtt topics
   if (publish){
-    logRobotControlInfoToSerial();
+    //logRobotControlInfoToSerial();
     publishControllerSpeedData();
   }
   

@@ -1,3 +1,4 @@
+#pragma once
 #include<ArduinoJson.h>
 
 extern int mode;
@@ -47,7 +48,8 @@ enum TaskState{
     ERROR
 };
 
+
 //FUNCTIONS
 void setMode(int m);
 
-bool readFileAsJson(JsonDocument doc, const char* filename);
+bool readFileAsJson(JsonDocument& doc, const char* filename);

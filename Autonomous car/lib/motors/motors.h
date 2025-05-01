@@ -1,3 +1,4 @@
+#pragma once
 #include <Arduino.h>
 #include <globals.h>
 
@@ -79,6 +80,7 @@ struct Robot
 {
     String id;
     float wheelRadius;
+    float wheelBase;
     Motor leftMotor, rightMotor;
     Encoder leftEncoder, rightEncoder;
     PIspeed leftPIDspeed, rightPIDspeed;
@@ -121,6 +123,11 @@ void updatePIspeedController();
 void updatePIpositionController();
 float rateLimiter(RateLimiter *rl, float input);
 int sgn(float value); 
+
+//Nav control
+void processAction(String action, float value);
+void forward(float meters);
+void turn(float angle);
 
 //Plot
 void logRobotControlInfoToSerial();

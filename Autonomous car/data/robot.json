@@ -1,6 +1,7 @@
 {
 "id" : "car1",
 "wheelRadius": 0.03,
+"wheelBase": 0.115,
 "motorPin":{
     "left": {
         "in1": 2,
