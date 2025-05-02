@@ -5,10 +5,10 @@
 #include <ArduinoJson.h>
 
 struct MqttSettings {
-    const char* server;
+    String server;
     int port;
-    const char* user;
-    const char* password;
+    String user;
+    String password;
 };
 
 class MqttManager {
@@ -16,7 +16,7 @@ public:
     static MqttManager& getInstance();
 
     void loadConfig(const char* configPath);
-    void connect(const std::vector<const char*>& topics);
+    void connect(const std::vector<const char*>& topics, MQTT_CALLBACK_SIGNATURE);
     void subscribe(const char* topic);
     void publish(const char* topic, const char* payload);
     void loop();
@@ -28,7 +28,6 @@ private:
     MqttManager& operator=(const MqttManager&) = delete;     // Delete assignment operator
 
     void reconnect();
-    static void messageReceivedCallback(char* topic, byte* payload, unsigned int length);
 
     WiFiClient espClient;
     PubSubClient client{espClient};

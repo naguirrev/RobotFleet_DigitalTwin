@@ -10,6 +10,23 @@ static const std::vector<const char*> topics = {
     "robot/test"
 };
 
+
+void processMqttCallback(char* topic, byte* payload, unsigned int length) {
+    Serial.print("[Custom] Message arrived: ");
+    Serial.print("Topic: ");
+    Serial.print(topic);
+    Serial.print(" Payload: ");
+    
+    // Convertir el payload en un String para mostrarlo
+    String payloadStr = "";
+    for (unsigned int i = 0; i < length; i++) {
+        payloadStr += (char)payload[i];
+    }
+    Serial.println(payloadStr);
+
+    // Aquí puedes añadir más lógica, como responder o realizar acciones basadas en el contenido del mensaje
+}
+
 /**
  * @brief Task to handle MQTT communication in a loop.
  * 
@@ -40,7 +57,7 @@ void initCommunication() {
     WifiManager::getInstance().connect();
     // Load the MQTT configuration file and connect to the MQTT broker
     MqttManager::getInstance().loadConfig(mqttConfigFile);
-    MqttManager::getInstance().connect(topics);
+    MqttManager::getInstance().connect(topics, processMqttCallback);
 
     xTaskCreatePinnedToCore(
         CommunicationTask,      
