@@ -2,6 +2,8 @@
 #include <shared.h>
 #include <UltrasonicSensor.h>
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include <MqttManager.h>
 
 #define TRIG_PIN 17
 #define ECHO_PIN 16
@@ -9,6 +11,21 @@
 #define MAX_DISTANCE_CM 7
 
 UltrasonicSensor sensor(TRIG_PIN, ECHO_PIN);
+const char* mqtt_topic_obstacle = "rfm/obstacle";
+
+/**
+ * @brief Function to publish obstacle data to the MQTT broker.
+ */
+void publishObstacle(ObstacleData obstacle) {
+    JsonDocument doc;
+    doc["x"] = obstacle.x;
+    doc["y"] = obstacle.y;
+    doc["distance"] = obstacle.distance;
+
+    char buffer[128];
+    serializeJson(doc, buffer, sizeof(buffer));
+    MqttManager::getInstance().publish(mqtt_topic_obstacle, buffer);
+}
 
 /**
  * @brief Task to detect obstacles using a distance sensor and update the obstacle data structure.
@@ -45,7 +62,9 @@ void obstacleDetectionTask(void *pvParameters) {
                 xSemaphoreGive(obstacleMutex);
             }
 
-            // Aquí podrías notificar a MotorControl vía EventGroup o flags
+            // Publish the obstacle data to the MQTT broker
+            publishObstacle(obstacle);
+
         }
 
         vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(200));

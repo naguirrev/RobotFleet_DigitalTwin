@@ -3,6 +3,7 @@
 #include <ObstacleDetection/ObstacleDetection.h>
 #include <Localization/Localization.h>
 #include <Communication/Communication.h>
+#include <Telemetry/Telemetry.h>
 
 void setup() {
     Serial.begin(115200);
@@ -11,6 +12,7 @@ void setup() {
     initObstacleDetection();
     initLocalization();
     initCommunication();
+    initTelemetry();
 }
 
 void loop(){}

@@ -7,12 +7,15 @@ const char *wifiConfigFile = "/wifi.json";
 const char *mqttConfigFile = "/mqtt.json";
 
 static const std::vector<const char*> topics = {
-    "robot/test"
+    "rfm/map",
+    "rfm/nav/path",
+    "rfm/nav/command", 
+    "rfm/obstacle",   
 };
 
 
 void processMqttCallback(char* topic, byte* payload, unsigned int length) {
-    Serial.print("[Custom] Message arrived: ");
+    Serial.print("[Communication] Message arrived: ");
     Serial.print("Topic: ");
     Serial.print(topic);
     Serial.print(" Payload: ");
@@ -61,7 +64,7 @@ void initCommunication() {
 
     xTaskCreatePinnedToCore(
         CommunicationTask,      
-        "TaskCommunicationLoop",
+        "Communication",
         4096,
         NULL,
         1,
