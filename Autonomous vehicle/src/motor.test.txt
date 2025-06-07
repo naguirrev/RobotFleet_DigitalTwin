@@ -1,0 +1,100 @@
+#include <Arduino.h>
+#include "MotorDriver.h"
+#include "Encoder.h"
+#include <FilesManager.h>
+
+// Definir el radio de la rueda y la base del robot
+const float wheelRadius = 0.03;  // Radio de la rueda en metros (5 cm)
+const float wheelBase = 0.115;     // Distancia entre las ruedas en metros
+
+// Definir pines de control de motores
+#define PPR 960
+#define LEFT_ENCODER_PIN_A 34
+#define LEFT_ENCODER_PIN_B 35
+
+#define RIGHT_ENCODER_PIN_A 33
+#define RIGHT_ENCODER_PIN_B 32
+
+#define LEFT_MOTOR_IN1 2
+#define LEFT_MOTOR_IN2 15
+#define LEFT_MOTOR_ENA 4
+#define LEFT_MOTOR_PWM_CHANNEL 0
+
+#define RIGHT_MOTOR_IN1 14
+#define RIGHT_MOTOR_IN2 12
+#define RIGHT_MOTOR_ENA 13
+#define RIGHT_MOTOR_PWM_CHANNEL 1
+
+// Inicializar el MotorDriver y Encoder
+MotorDriver leftMotor;
+MotorDriver rightMotor;
+
+EncoderDriver leftEncoder;  
+EncoderDriver rightEncoder; 
+
+unsigned long previousMillis = 0;
+const unsigned long interval = 100; // Intervalo para calcular velocidad angular (en ms)
+
+const char* motorConfig = "/motor.json"; 
+const char* encoderConfig = "/encoder.json";
+
+void setup() {
+    Serial.begin(115200); // Inicializar la comunicación serie
+    delay(1000); // Esperar un segundo para estabilizar la conexión serie
+    FilesManager::initLittleFS(); // Inicializar el sistema de archivos LittleFS
+
+    //Read configuration
+    leftMotor.loadConfig(motorConfig, "left");
+    rightMotor.loadConfig(motorConfig, "right");
+    leftEncoder.loadConfig(encoderConfig, "left");
+    rightEncoder.loadConfig(encoderConfig, "right");
+
+    //Initialize hardware
+    leftMotor.begin();
+    rightMotor.begin();
+    leftEncoder.begin();
+    rightEncoder.begin();
+}
+
+void loop() {
+    unsigned long currentMillis = millis();
+    float deltaTime = (currentMillis - previousMillis) / 1000.0f; // Convertir a segundos
+    previousMillis = currentMillis;
+
+    // Obtener la posición angular y la velocidad angular de cada rueda
+    float leftAngularPosition = leftEncoder.getAngularPosition();
+    float rightAngularPosition = rightEncoder.getAngularPosition();
+    float leftAngularSpeed = leftEncoder.getAngularSpeed(deltaTime);
+    float rightAngularSpeed = rightEncoder.getAngularSpeed(deltaTime);
+
+    // Imprimir resultados
+    Serial.println("---------------------------------");
+    Serial.print("Left Encoder Count: ");
+    Serial.print(leftEncoder.getCount());
+    Serial.print(", Right Encoder Count: ");
+    Serial.println(rightEncoder.getCount());
+
+    Serial.print("Left Angular Position: ");
+    Serial.print(leftAngularPosition);
+    Serial.print("Right Angular Position: ");
+    Serial.println(rightAngularPosition);
+
+    Serial.print("Left Angular Speed: ");
+    Serial.print(leftAngularSpeed);
+    Serial.print("Right Angular Speed: ");
+    Serial.println(rightAngularSpeed);
+    Serial.println("---------------------------------");
+
+    // Control de los motores (ejemplo: mover hacia adelante)
+    leftMotor.setDutyCycle(70);  // Establecer velocidad del motor izquierdo
+    rightMotor.setDutyCycle(70); // Establecer velocidad del motor derecho
+    // Esperar un momento
+    delay(3000);  // Mover hacia adelante durante 2 segundos
+
+    // Detener los motores
+    leftMotor.stop();
+    rightMotor.stop();
+
+    // Esperar un momento
+    delay(1000);  // Esperar 1 segundo
+}

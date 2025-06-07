@@ -1,0 +1,10 @@
+{
+    "left":{
+        "rateUp": 8,
+        "rateDown":8
+    },
+    "right":{
+        "rateUp": 8,
+        "rateDown": 8
+    }
+}

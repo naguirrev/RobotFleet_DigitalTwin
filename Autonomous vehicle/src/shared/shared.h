@@ -1,7 +1,9 @@
 #pragma once
-
+#include <Arduino.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+
+#define MAX_ACTIONS 100
 
 typedef struct {
     float x;
@@ -34,11 +36,15 @@ typedef struct {
 extern AngularPosition angularPos;
 extern SemaphoreHandle_t angularPosMutex;
 
-typedef enum {
-    STOP,
-    FORWARD,
-    TURN_LEFT,
-    TURN_RIGHT,
-} NavigationOrder;
-extern NavigationOrder currentOrder;
-extern SemaphoreHandle_t orderMutex;
+typedef struct {
+    String action;  
+    float value;  
+    bool completed = false;
+} Action;
+extern QueueHandle_t actionQueue;
+
+
+extern bool EmergencyStop;
+extern SemaphoreHandle_t emergencyStopMutex;
+
+int sgn(float value);

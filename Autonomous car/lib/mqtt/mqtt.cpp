@@ -131,6 +131,11 @@ void processMqttMessage(char* topic, byte* payload, unsigned int length){
     char message[length + 1];
     memcpy(message, payload, length);
     message[length] = '\0'; // Añadir terminador nulo para que sea una cadena válida
+    Serial.print("Received message: ");
+    Serial.println(message);
+    Serial.print("Topic: ");
+    Serial.println(topic);
+
 
     //Robot: Control mode
     if (strcmp(topic, getTopic(mqtt_mode).c_str()) == 0) {
@@ -138,8 +143,10 @@ void processMqttMessage(char* topic, byte* payload, unsigned int length){
       mode = m;
       Serial.print("Mode set to: ");
       Serial.println(m);
-    } 
-
+      Serial.print(">Mode:");
+      Serial.println(mode);
+    }
+    
     //Encoder
     else if(strcmp(topic, getTopic(mqtt_encoder_left_set).c_str()) == 0){
 
@@ -317,6 +324,60 @@ char* PIPositionStateToJson(PIposition piPos, char* buffer) {
            piPos.kp, piPos.ki, piPos.minSpeed);
   return buffer;
 }
+
+char* RobotStateToJson(float dt, char* buffer, size_t buffer_size) {
+  snprintf(buffer, buffer_size,
+    "{"
+      "\"dt\":%.3f,"
+      "\"mode\":%d,"
+      "\"left_wheel\":{"
+        "\"duty\":%.2f,"
+        "\"speed\":%.2f,"
+        "\"speed_setpoint\":%.2f,"
+        "\"speed_kp\":%.2f,"
+        "\"speed_ki\":%.2f,"
+        "\"pos\":%.2f,"
+        "\"pos_setpoint\":%.2f,"
+        "\"pos_kp\":%.2f,"
+        "\"pos_ki\":%.2f"
+      "},"
+      "\"right_wheel\":{"
+        "\"duty\":%.2f,"
+        "\"speed\":%.2f,"
+        "\"speed_setpoint\":%.2f,"
+        "\"speed_kp\":%.2f,"
+        "\"speed_ki\":%.2f,"
+        "\"pos\":%.2f,"
+        "\"pos_setpoint\":%.2f,"
+        "\"pos_kp\":%.2f,"
+        "\"pos_ki\":%.2f"
+      "}"
+    "}",
+    dt,
+    mode,
+    // Left wheel
+    robot.leftMotor.dutyCycle,
+    robot.leftPIDspeed.currentSpeed,
+    robot.leftPIDspeed.setPoint,
+    robot.leftPIDspeed.kp,
+    robot.leftPIDspeed.ki,
+    robot.leftPIDposition.currentPosition,
+    robot.leftPIDposition.setPoint,
+    robot.leftPIDposition.kp,
+    robot.leftPIDposition.ki,
+    // Right wheel
+    robot.rightMotor.dutyCycle,
+    robot.rightPIDspeed.currentSpeed,
+    robot.rightPIDspeed.setPoint,
+    robot.rightPIDspeed.kp,
+    robot.rightPIDspeed.ki,
+    robot.rightPIDposition.currentPosition,
+    robot.rightPIDposition.setPoint,
+    robot.rightPIDposition.kp,
+    robot.rightPIDposition.ki
+  );
+  return buffer;
+}
 //Encoder: state, odometry 
 void publishEncoderState(){
 
@@ -338,6 +399,11 @@ void publisRfidData(){}
 void publishRfidRaw(){}
 
 //Controller: speed (state, data)
+void publishRobotState(float deltaTime){
+  char buffer[512];
+  char* payload  = RobotStateToJson(deltaTime, buffer, sizeof(buffer));
+  client.publish(getTopic(mqtt_joint_state).c_str(), payload);
+}
 void publishControllerSpeedState(){
   char leftBuffer [100];
   char rightBuffer [100];
@@ -385,6 +451,8 @@ void publishState(){
   char buffer[3];
   client.publish(getTopic(mqtt_state).c_str(), intTochar(robot.state, buffer));
 }
+
+
   
   
   

@@ -1,13 +1,15 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include <motors.h>
+#include "motors.h"
+#include <FilesManager.h>
+
 
 Robot robot;
 const char *configFile = "/robot.json";
 void initRobot() {    
     JsonDocument doc;  
-    bool result = readFileAsJson(doc, configFile);
+    bool result = FilesManager::readFileAsJson(doc, configFile);
     if(result){
   
     // Load data at Robot struct
@@ -139,14 +141,6 @@ void rightPulsesCounter()
 
 }
 
-int sgn(float value){
-
-  if(value > 0) return 1;
-  if (value < 0) return -1;
-  
-  return 0;
-}
-
 void resetEncodersPulses(){
   robot.leftEncoder.pulses = 0;
   robot.rightEncoder.pulses = 0;
@@ -229,6 +223,12 @@ void updatePIpositionController(){
   }
 }
 
+bool actionCompleted(){
+  return robot.leftPIDposition.setPoint==0 && robot.rightPIDposition.setPoint==0 
+          && robot.leftPIDposition.currentPosition==0 && robot.rightPIDposition.currentPosition==0
+          && robot.leftPIDspeed.setPoint==0 && robot.rightPIDspeed.setPoint==0;
+}
+
 void updatePIspeedController(){
   //Limitate slope
   float leftSetPointLimited = rateLimiter(&robot.leftRateLimiter, robot.leftPIDspeed.setPoint); 
@@ -301,6 +301,20 @@ void turn(float angle){
   robot.leftPIDposition.setPoint = sgn(angle) * angularDisplacement;
   robot.rightPIDposition.setPoint = sgn(angle) * -angularDisplacement;
 }
+
+void stopSetPoint(){
+  Serial.print("Left setpoint: ");
+  Serial.println(robot.leftPIDposition.setPoint);
+  Serial.print("Left current position: ");
+  Serial.println(robot.leftPIDposition.currentPosition);
+  Serial.print("Right setpoint: ");
+  Serial.println(robot.rightPIDposition.setPoint);
+  Serial.print("Right current position: ");
+  Serial.println(robot.rightPIDposition.currentPosition);
+
+  robot.leftPIDposition.setPoint = robot.leftPIDposition.currentPosition;
+  robot.rightPIDposition.setPoint = robot.rightPIDposition.currentPosition;
+}
 void processAction(String action, float value){
   if (action.equalsIgnoreCase("forward")){
     forward(value);
@@ -309,18 +323,16 @@ void processAction(String action, float value){
     turn(value);
   }
   else if(action.equalsIgnoreCase("stop")){
-    stop();
+    stopSetPoint();
+    Serial.println("Stop setpoint");
   }else{
     Serial.println("Unrecognized action");
   }
 
 }
 
-
 //Plot
 void logRobotControlInfoToSerial(){
-  Serial.print(">Mode:");
-  Serial.println(mode);
   //Duty cycle
   Serial.print(">LDuty:");
   Serial.println(robot.leftMotor.dutyCycle);
@@ -343,6 +355,10 @@ void logRobotControlInfoToSerial(){
   Serial.println(robot.rightPIDspeed.kp);
   Serial.print(">RSpeedKi:");
   Serial.println(robot.rightPIDspeed.ki);
+  Serial.println(">LSpeedIntegralError:");
+  Serial.println(robot.leftPIDspeed.integralError);
+  Serial.println(">RSpeedIntegralError:");
+  Serial.println(robot.rightPIDspeed.integralError);
   //Position control info
   Serial.print(">LAngularPos:");
   Serial.println(robot.leftPIDposition.currentPosition);
@@ -360,6 +376,23 @@ void logRobotControlInfoToSerial(){
   Serial.println(robot.rightPIDposition.kp);
   Serial.print(">RPosKi:");
   Serial.println(robot.rightPIDposition.ki);
+  Serial.print(">LPosIntegralError:");
+  Serial.println(robot.leftPIDposition.integralError);
+  Serial.print(">RPosIntegralError:");
+  Serial.println(robot.rightPIDposition.integralError);
+  //Rate limiter
+  Serial.print(">LRateUp:");
+  Serial.println(robot.leftRateLimiter.rateUp);
+  Serial.print(">LRateDown:");
+  Serial.println(robot.leftRateLimiter.rateDown);
+  Serial.print(">LPreviousOutput:");
+  Serial.println(robot.leftRateLimiter.previousOutput);
+  Serial.print(">RRateUp:");
+  Serial.println(robot.rightRateLimiter.rateUp);
+  Serial.print(">RRateDown:");
+  Serial.println(robot.rightRateLimiter.rateDown);
+  Serial.print(">RPreviousOutput:");
+  Serial.println(robot.rightRateLimiter.previousOutput);
 }
 //Create a method to log robot info after read configFile
 

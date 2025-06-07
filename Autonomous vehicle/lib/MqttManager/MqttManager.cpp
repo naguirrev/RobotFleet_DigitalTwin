@@ -29,7 +29,7 @@ void MqttManager::loadConfig(const char* configPath) {
 void MqttManager::connect(const std::vector<const char*>& topics, MQTT_CALLBACK_SIGNATURE) {
     Serial.print("Connecting to MQTT server: ");
     Serial.println(mqttSettings.server);
-
+    client.setBufferSize(2048);
     client.setServer(mqttSettings.server.c_str(), mqttSettings.port);
     client.setCallback(callback);
 

@@ -1,0 +1,12 @@
+{
+    "left":{
+        "kp":13.2,
+        "ki":15,
+        "coulombFriction":40
+    },
+    "right":{
+        "kp":13.2,
+        "ki":15,
+        "coulombFriction":40    
+    } 
+}

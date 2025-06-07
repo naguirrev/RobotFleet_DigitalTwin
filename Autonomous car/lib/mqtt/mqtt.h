@@ -91,6 +91,9 @@ constexpr const char* mqtt_pose = "/pose";
 constexpr const char* mqtt_state = "/state";
 constexpr const char* mqtt_navigation_path_state = "/navigation/path/state";
 
+//Robot state
+constexpr const char* mqtt_joint_state = "/joint_states";
+
 
 //FUNCTIONS
 void setupWifi();
@@ -101,6 +104,7 @@ void ensureMqttConnected();
 void processMqttMessage(char* topic, byte* payload, unsigned int length);
 
 //Publish on mqtt topics
+void publishRobotState(float deltaTime);
 void publishEncoderState();
 void publishEncoderOdometry();
 void publishUltrasonicstate();

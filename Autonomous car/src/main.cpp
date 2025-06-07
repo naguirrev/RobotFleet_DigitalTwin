@@ -60,8 +60,9 @@ void loop() {
 
   //Publish to mqtt topics
   if (publish){
-    //logRobotControlInfoToSerial();
-    publishControllerSpeedData();
+    logRobotControlInfoToSerial();
+    publishRobotState(deltaTime);
+    //publishControllerSpeedData();
   }
   
   delay(10); // Small delay for stability 
@@ -71,40 +72,41 @@ void loop() {
 
 // --- Functions definition ---
 void setControlMode(int mode){
+  
   switch (mode)
   {
-  case 0:{
-    //Stop the car and data publication
-    stop();
-    publish = false;
-    break;
-  }
-  case 1:{
-    //Open-loop control: read duty cycle and set car pwm
-    publish = true;
-    leftMotorControl();
-    rightMotorControl();
-    break;
+    case 0:{
+      //Stop the car and data publication
+      stop();
+      publish = false;
+      break;
     }
-  case 2:{
-    //Speed controller: read angular speed set point and use speed PI controller
-    publish = true;
-    updatePIspeedController();
-    break;
-  } 
-  case 3:{
-    //Position controller: read angular position set point and use position PI controller
-    publish = true;
-    updatePIpositionController();
-    updatePIspeedController();
-    break;
-  }
-  default:{
-    //Stop the car
-    publish =true;
-    stop();
-    break;
-  }
+    case 1:{
+      //Open-loop control: read duty cycle and set car pwm
+      publish = true;
+      leftMotorControl();
+      rightMotorControl();
+      break;
+      }
+    case 2:{
+      //Speed controller: read angular speed set point and use speed PI controller
+      publish = true;
+      updatePIspeedController();
+      break;
+    } 
+    case 3:{
+      //Position controller: read angular position set point and use position PI controller
+      publish = true;
+      updatePIpositionController();
+      updatePIspeedController();
+      break;
+    }
+    default:{
+      //Stop the car
+      publish =true;
+      stop();
+      break;
+    }
   }
 }
 

@@ -11,7 +11,7 @@
 #define MAX_DISTANCE_CM 7
 
 UltrasonicSensor sensor(TRIG_PIN, ECHO_PIN);
-const char* mqtt_topic_obstacle = "rfm/obstacle";
+const char* mqtt_topic_obstacle_pub = "rfm/obstacle";
 
 /**
  * @brief Function to publish obstacle data to the MQTT broker.
@@ -24,7 +24,7 @@ void publishObstacle(ObstacleData obstacle) {
 
     char buffer[128];
     serializeJson(doc, buffer, sizeof(buffer));
-    MqttManager::getInstance().publish(mqtt_topic_obstacle, buffer);
+    MqttManager::getInstance().publish(mqtt_topic_obstacle_pub, buffer);
 }
 
 /**
@@ -44,6 +44,7 @@ void publishObstacle(ObstacleData obstacle) {
  */
 void obstacleDetectionTask(void *pvParameters) {
     TickType_t lastWake = xTaskGetTickCount();
+    ObstacleData lastObstacle;
 
     for (;;) {
         float dist = sensor.getDistanceCM();
@@ -57,11 +58,12 @@ void obstacleDetectionTask(void *pvParameters) {
                 obstacle.distance = dist;
                 obstacle.x = 0; // Placeholder for the current X location (use current location in real code)
                 obstacle.y = 0; // Placeholder for the current Y location
-                
-                // Release the semaphore after updating the obstacle data
+           
+               // Release the semaphore after updating the obstacle data
                 xSemaphoreGive(obstacleMutex);
             }
 
+         
             // Publish the obstacle data to the MQTT broker
             publishObstacle(obstacle);
 

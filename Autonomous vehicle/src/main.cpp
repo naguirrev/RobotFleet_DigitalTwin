@@ -4,15 +4,17 @@
 #include <Localization/Localization.h>
 #include <Communication/Communication.h>
 #include <Telemetry/Telemetry.h>
+#include <MotorControl/MotorControl.h>
 
 void setup() {
     Serial.begin(115200);
     FilesManager::initLittleFS();
 
-    initObstacleDetection();
-    initLocalization();
+    //initObstacleDetection();
+    //initLocalization();
     initCommunication();
-    initTelemetry();
+    //initTelemetry();
+    initMotorControl();    
 }
 
 void loop(){}

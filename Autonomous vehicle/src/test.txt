@@ -1,0 +1,40 @@
+#include "Encoder.h"
+#include "MotorDriver.h"
+
+#define ENCODER_PIN_A 34
+#define ENCODER_PIN_B 35
+
+#define MOTOR_IN1 2
+#define MOTOR_IN2 15
+#define MOTOR_ENA 4
+#define MOTOR_PWM_CHANNEL 0
+
+EncoderDriver encoder(ENCODER_PIN_A, ENCODER_PIN_B);
+MotorDriver motor(MOTOR_IN1, MOTOR_IN2, MOTOR_ENA, MOTOR_PWM_CHANNEL);
+
+// Número de pulsos deseados antes de detenerse
+const int TARGET_PULSES = 960;
+
+void setup() {
+    Serial.begin(115200);
+    encoder.begin();
+    motor.begin();
+
+    Serial.println("Starting motor...");
+    encoder.reset();
+    motor.setDutyCycle(50); // 50% duty, hacia adelante
+}
+
+void loop() {
+    long pulses = encoder.getCount();
+    Serial.print("Pulses: ");
+    Serial.println(pulses);
+
+    if (abs(pulses) >= TARGET_PULSES) {
+        motor.stop();
+        Serial.println("Target reached. Motor stopped.");
+        while (true); // Detener ejecución aquí
+    }
+
+    delay(100);
+}

@@ -1,0 +1,12 @@
+{
+    "left":{
+            "kp":2.5,
+            "ki":0,
+            "minSpeed": 0.5
+        },
+        "right":{
+            "kp":2.5,
+            "ki":0,
+            "minSpeed":0.5
+        }
+}

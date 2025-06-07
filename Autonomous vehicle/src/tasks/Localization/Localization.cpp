@@ -40,7 +40,6 @@ void LocalizationTask(void *pvParameters) {
                 xSemaphoreGive(localizationMutex);
             }
         }
-
         vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(200));
     }
 }

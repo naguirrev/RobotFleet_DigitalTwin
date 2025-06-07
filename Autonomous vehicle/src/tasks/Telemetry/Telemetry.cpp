@@ -22,7 +22,6 @@ void telemetryTask(void *pvParameters) {
     for (;;) {
         MotorSpeed speedCopy;
         AngularPosition angleCopy;
-        NavigationOrder currentOrderCopy;
         LocalizationData locationCopy;
 
         
@@ -34,11 +33,6 @@ void telemetryTask(void *pvParameters) {
         if (xSemaphoreTake(angularPosMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
             angleCopy = angularPos;
             xSemaphoreGive(angularPosMutex);
-        }
-
-        if (xSemaphoreTake(orderMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-            currentOrderCopy = currentOrder;
-            xSemaphoreGive(orderMutex);
         }
 
         if (xSemaphoreTake(localizationMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
@@ -54,7 +48,6 @@ void telemetryTask(void *pvParameters) {
         doc["angle"]["left"] = angleCopy.left;
         doc["angle"]["right"] = angleCopy.right;
 
-        doc["order"] = currentOrder;
 
         doc["position"]["x"] = locationCopy.row;
         doc["position"]["y"] = locationCopy.col;

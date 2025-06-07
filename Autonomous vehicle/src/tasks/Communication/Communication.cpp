@@ -2,16 +2,36 @@
 #include <MqttManager.h>
 #include <WifiManager.h>
 #include <Arduino.h>
+#include <shared.h>
 
 const char *wifiConfigFile = "/wifi.json";
 const char *mqttConfigFile = "/mqtt.json";
 
+const char *mqtt_topic_map = "rfm/map";
+const char *mqtt_topic_nav_path = "rfm/nav/path";
+const char *mqtt_topic_nav_command = "rfm/nav/command";
+const char *mqtt_topic_obstacle = "rfm/obstacle";
+
 static const std::vector<const char*> topics = {
-    "rfm/map",
-    "rfm/nav/path",
-    "rfm/nav/command", 
-    "rfm/obstacle",   
+    mqtt_topic_map,
+    mqtt_topic_nav_path,
+    mqtt_topic_nav_command,
+    mqtt_topic_obstacle   
 };
+
+
+JsonDocument readTopicAsJson(char message[]) {
+    JsonDocument jsonDoc; // Create a JSON document with sufficient size
+    DeserializationError error = deserializeJson(jsonDoc, message);
+
+    if (error) {
+        Serial.print("Failed to parse JSON: ");
+        Serial.println(error.c_str());
+        // Return an empty document in case of an error
+        return jsonDoc;
+    }
+    return jsonDoc;
+} 
 
 
 void processMqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -22,12 +42,56 @@ void processMqttCallback(char* topic, byte* payload, unsigned int length) {
     
     // Convertir el payload en un String para mostrarlo
     String payloadStr = "";
+    String topicStr(topic);
+    char message[length + 1];
+    memcpy(message, payload, length);
+    message[length] = '\0';
     for (unsigned int i = 0; i < length; i++) {
         payloadStr += (char)payload[i];
     }
     Serial.println(payloadStr);
 
-    // Aquí puedes añadir más lógica, como responder o realizar acciones basadas en el contenido del mensaje
+    if (topicStr == mqtt_topic_nav_path) {
+        JsonDocument jDoc = readTopicAsJson(message); 
+    
+        if (!jDoc.is<JsonArray>()) {
+            Serial.println("[MQTT] Invalid JSON: expected array of actions");
+            return;
+        }
+    
+        JsonArray actionsArray = jDoc.as<JsonArray>();
+    
+        for (JsonObject actionObj : actionsArray) {
+            if (actionObj["action"].is<const char*>() && actionObj["value"].is<float>()) {
+                Action action;
+                action.action = String(actionObj["action"].as<const char*>());
+                action.value = actionObj["value"].as<float>();
+                action.completed = false;
+    
+                if (xQueueSend(actionQueue, &action, pdMS_TO_TICKS(100)) != pdPASS) {
+                    Serial.println("[MQTT] Failed to enqueue action");
+                } else {
+                    Serial.printf("[MQTT] Action enqueued: %s - %.2f\n", action.action.c_str(), action.value);
+                }
+            } else {
+                Serial.println("[MQTT] Invalid action format inside array");
+            }
+        }
+    }
+
+    if (topicStr == mqtt_topic_nav_command) {
+        String command = String(message);
+        if (command.equalsIgnoreCase("stop")) {
+            Serial.println("[MQTT] Stop command received");
+            // Set the emergency stop flag
+            if (xSemaphoreTake(emergencyStopMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                EmergencyStop = true;
+                xSemaphoreGive(emergencyStopMutex);
+            }
+        } else {
+            Serial.println("[MQTT] Unrecognized command");
+        }    
+    }
 }
 
 /**

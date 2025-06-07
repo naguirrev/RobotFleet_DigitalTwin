@@ -1,0 +1,130 @@
+#include <MotorDriver.h>
+#include <Encoder.h>
+#include <PIController.h>
+#include <PISpeed.h>
+#include <PIPosition.h>
+
+const float loopTime = 0.01; // The time it takes for one complete loop cycle in seconds
+
+const char* motorConfig = "/motor.json"; 
+const char* encoderConfig = "/encoder.json";
+const char* piSpeedConfig = "/pispeed.json";
+const char* rateLimiterConfig = "/rateLimiter.json";
+
+TickType_t currentTick = 0;
+TickType_t lastControlTick = 0;
+
+
+MotorDriver leftMotor, rightMotor;
+EncoderDriver leftEncoder, rightEncoder;
+RateLimiter leftRateLimiter, rightRateLimiter;
+PISpeed leftPISpeed{&leftRateLimiter};
+PISpeed rightPISpeed{&rightRateLimiter};
+PIPosition leftPIPosition, rightPIPosition;
+
+
+
+void MotorControlTask(void* parameter){
+    leftPIPosition.setPoint = 45;
+    rightPIPosition.setPoint = 45;
+    TickType_t lastWake = xTaskGetTickCount();
+
+    for(;;) {
+        
+        //Calcula current angular speed y angular position
+        currentTick = xTaskGetTickCount();
+        float deltaTime = 0.03; //(currentTick - lastControlTick) * portTICK_PERIOD_MS / 1000.0; // Convert to seconds
+        float diff = (currentTick - lastControlTick) * portTICK_PERIOD_MS;
+        leftPISpeed.currentSpeed = leftEncoder.getAngularSpeed(deltaTime);
+        rightPISpeed.currentSpeed = rightEncoder.getAngularSpeed(deltaTime);
+        leftPIPosition.currentPosition = leftEncoder.getAngularPosition();
+        rightPIPosition.currentPosition = rightEncoder.getAngularPosition();
+        
+        //actualiza el controlador de posicion y velocidad (que en este caso toca también actualizar el de velocidad)
+        float leftSpeedSetPoint = leftPIPosition.update();
+        float rightSpeedSetPoint = rightPIPosition.update();
+         
+        if(abs(leftPIPosition.setPoint-leftPIPosition.currentPosition) < 0.1){
+            leftSpeedSetPoint=0; 
+            leftPIPosition.setPoint = 0;
+            leftPIPosition.currentPosition = 0;
+            leftEncoder.reset();
+        } 
+
+        if(abs(rightPIPosition.setPoint-rightPIPosition.currentPosition) < 0.1){
+            rightSpeedSetPoint=0;
+            rightPIPosition.setPoint= 0;
+            rightPIPosition.currentPosition = 0;
+            rightEncoder.reset();
+        }
+
+        leftPISpeed.setPoint = leftSpeedSetPoint;
+        rightPISpeed.setPoint = rightSpeedSetPoint;
+
+        float leftDutyCycle = leftPISpeed.update(deltaTime);
+        float rightDutyCycle = rightPISpeed.update(deltaTime);
+
+        // Set the duty cycle to the motors
+        leftMotor.setDutyCycle(leftDutyCycle);
+        rightMotor.setDutyCycle(rightDutyCycle);
+
+        //resetea los pulsos de los encoders
+        leftEncoder.resetIterationPulses();
+        rightEncoder.resetIterationPulses();
+        Serial.print(">DeltaTime:");
+        Serial.println(diff);
+        Serial.print(">LPosSetPoint:");
+        Serial.println(leftPIPosition.setPoint);
+        Serial.print(">RPosSetPoint:");
+        Serial.println(rightPIPosition.setPoint);
+        Serial.print(">LPos:");
+        Serial.println(leftPIPosition.currentPosition);
+        Serial.print(">RPos:");
+        Serial.println(rightPIPosition.currentPosition);
+        Serial.print(">LSpeedSetPoint:");
+        Serial.println(leftSpeedSetPoint);
+        Serial.print(">RSpeedSetPoint:");
+        Serial.println(rightSpeedSetPoint);
+        lastControlTick = currentTick;
+     
+        vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(30))
+    }
+
+}
+
+void initMotorControl(){
+    //Load config
+    leftMotor.loadConfig(motorConfig, "left");
+    rightMotor.loadConfig(motorConfig, "right");
+    
+    
+    rightEncoder.loadConfig(encoderConfig, "right");
+    leftEncoder.loadConfig(encoderConfig, "left");
+
+    leftRateLimiter.loadConfig(rateLimiterConfig, "left");
+    rightRateLimiter.loadConfig(rateLimiterConfig, "right");
+
+    leftPISpeed.loadConfig(piSpeedConfig, "left");
+    rightPISpeed.loadConfig(piSpeedConfig, "right");
+
+    leftPIPosition.loadConfig(piSpeedConfig, "left");
+    rightPIPosition.loadConfig(piSpeedConfig, "right");
+
+    //Init hardware
+    leftMotor.begin();
+    rightMotor.begin();
+
+    leftEncoder.begin();
+    rightEncoder.begin();
+
+    //Create the task
+    xTaskCreatePinnedToCore(
+        MotorControlTask,       // Function to implement the task
+        "MotorControlTask",     // Name of the task
+        2048,                   // Stack size in words
+        NULL,                   // Task input parameter
+        1,                      // Priority of the task
+        NULL,                   // Task handle
+        1                       // Core where the task should run
+    );
+}
